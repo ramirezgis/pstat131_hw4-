@@ -1,0 +1,80 @@
+---
+title: "hw4"
+output: html_document
+date: "2022-11-03"
+---
+
+```{r}
+library(tidymodels)
+library(tidyverse)
+library(dplyr)
+#library(corrr)
+library(ggplot2)
+library(discrim)
+library(klaR)
+tidymodels_prefer()
+titanic <- read.csv("data/titanic.csv") %>% 
+  mutate(survived = factor(survived, levels = c("Yes", "No")))
+titanic$pclass <- as.factor(titanic$pclass)
+titanic
+set.seed(1234)
+```
+
+Preparing recipe from hw3
+```{r}
+titanic_recipe <-
+  recipe(survived ~ pclass+sex+age+sib_sp+parch+fare, data = train) %>%
+  step_impute_linear(age,
+                     impute_with = imp_vars(sib_sp, parch, fare)) %>%
+  step_dummy(all_nominal_predictors()) %>%
+  step_interact(terms = ~starts_with("sex"):fare + age:fare)
+titanic_recipe
+```
+
+Question 1
+```{r}
+titanic_split <- initial_split(titanic, 
+                               prop = 0.80, 
+                               strata = survived)
+titanic_split
+
+train <- training(titanic_split)
+test <- testing(titanic_split)
+```
+
+
+179 observations for the testing data set and 712 observations for the training data set. In adding them up, it makes a total of 891 observations, which is an appropriate number of observations.
+
+Question 2
+```{r}
+lm_spec <- linear_reg() %>%
+  set_mode("regression") %>%
+  set_engine("lm")
+
+#poly_rec <- titanic_recipe %>%
+  #step_poly(pclass+sex+age+sib_sp+parch+fare, degree = 10)
+
+poly_tuned_rec <- titanic_recipe %>%
+  step_poly(pclass+sex+age+sib_sp+parch+fare, degree = tune())
+
+poly_tuned_wf <- workflow() %>%
+  add_recipe(poly_tuned_rec) %>%
+  add_model(lm_spec)
+
+poly_tuned_wf
+
+auto_folds <- vfold_cv(train, v = 10)
+auto_folds
+
+degree_grid <- grid_regular(degree(range = c(1, 10)), levels = 10)
+degree_grid
+
+tune_res <- tune_grid(
+  object = poly_tuned_wf, 
+  resamples = auto_folds, 
+  grid = degree_grid,
+  control = control_grid(verbose = TRUE)
+)
+```
+
+
