@@ -51,6 +51,41 @@ titanic_folds <- vfold_cv(train, v = 10)
 titanic_folds
 ```
 
+Question 3
+Answer questions
+
+Question 4
+```{r}
+log_model <- logistic_reg() %>%
+  set_mode("classification") %>%
+  set_engine("glm")
+
+log_wrkflow <- workflow() %>%
+  add_model(log_model) %>%
+  add_recipe(titanic_recipe)
+
+lda_model <- discrim_linear() %>%
+  set_mode("classification") %>%
+  set_engine("MASS")
+
+lda_wrkflow <- workflow() %>%
+  add_model(lda_model) %>%
+  add_recipe(titanic_recipe)
+
+qda_model <- discrim_quad() %>%
+  set_mode("classification") %>%
+  set_engine("MASS")
+
+qda_wrkflow <- workflow() %>%
+  add_model(qda_model) %>%
+  add_recipe(titanic_recipe)
+
+degree_grid <- grid_regular(degree(range = c(1, 10)), levels = 10)
+
+tune_res <- tune_grid(object = log_wrkflow, resamples = titanic_folds, grid = degree_grid)
+```
+
+
 
 ```{r}
 degree_grid <- grid_regular(degree(range = c(1, 10)), levels = 10)
