@@ -47,25 +47,12 @@ test <- testing(titanic_split)
 
 Question 2
 ```{r}
-lm_spec <- linear_reg() %>%
-  set_mode("regression") %>%
-  set_engine("lm")
+titanic_folds <- vfold_cv(train, v = 10)
+titanic_folds
+```
 
-#poly_rec <- titanic_recipe %>%
-  #step_poly(pclass+sex+age+sib_sp+parch+fare, degree = 10)
 
-poly_tuned_rec <- titanic_recipe %>%
-  step_poly(pclass+sex+age+sib_sp+parch+fare, degree = tune())
-
-poly_tuned_wf <- workflow() %>%
-  add_recipe(poly_tuned_rec) %>%
-  add_model(lm_spec)
-
-poly_tuned_wf
-
-auto_folds <- vfold_cv(train, v = 10)
-auto_folds
-
+```{r}
 degree_grid <- grid_regular(degree(range = c(1, 10)), levels = 10)
 degree_grid
 
@@ -74,6 +61,10 @@ tune_res <- tune_grid(
   resamples = auto_folds, 
   grid = degree_grid,
   control = control_grid(verbose = TRUE)
+```
+
+
+```{r}
 )
 ```
 
