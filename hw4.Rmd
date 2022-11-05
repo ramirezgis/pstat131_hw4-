@@ -80,12 +80,49 @@ qda_wrkflow <- workflow() %>%
   add_model(qda_model) %>%
   add_recipe(titanic_recipe)
 
-degree_grid <- grid_regular(degree(range = c(1, 10)), levels = 10)
-
-tune_res <- tune_grid(object = log_wrkflow, resamples = titanic_folds, grid = degree_grid)
 ```
 
 
+Question 5
+```{r, eval = FALSE}
+log_fit <- fit_resamples(log_wrkflow, titanic_folds)
+lda_fit <- fit_resamples(lda_wrkflow, titanic_folds)
+qda_fit <- fit_resamples(qda_wrkflow, titanic_folds)
+
+#getwd()
+#save(log_fit, lda_fit, qda_fit, file = "mydata.rda")
+#rm(log_fit, lda_fit, qda_fit)
+load(file = "mydata.rda")
+```
+
+
+Question 6: mean and std errors
+```{r}
+collect_metrics(log_fit)[1,] #mean: 0.7865, std: 0.0133
+collect_metrics(lda_fit)[1,] #mean: 0.7893, std: 0.01283
+collect_metrics(qda_fit)[1,] #mean: 0.76559, std: 0.0177
+
+rbind(d())
+#so lda_fit better?
+```
+
+Question 7
+```{r}
+fit_all <- fit(lda_wrkflow, train)
+```
+
+Question 8
+```{r}
+fit_test <- fit(lda_wrkflow, test)
+lda_pred <- predict(fit_test, new_data = test, 
+                    type = "class") %>%
+  bind_cols(test %>% select(survived))
+
+lda_acc <- lda_pred %>%
+  accuracy(truth = survived, estimate = .pred_class)
+
+lda_acc
+```
 
 ```{r}
 degree_grid <- grid_regular(degree(range = c(1, 10)), levels = 10)
