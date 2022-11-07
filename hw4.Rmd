@@ -4,6 +4,7 @@ output: html_document
 date: "2022-11-03"
 ---
 
+prep for hw 4
 ```{r}
 library(tidymodels)
 library(tidyverse)
@@ -20,7 +21,7 @@ titanic
 set.seed(1234)
 ```
 
-Preparing recipe from hw3
+Preparing recipe from hw3 cont. with recipe
 ```{r}
 titanic_recipe <-
   recipe(survived ~ pclass+sex+age+sib_sp+parch+fare, data = train) %>%
@@ -52,7 +53,7 @@ titanic_folds
 ```
 
 Question 3
-Answer questions
+In Question 2, we are splitting our data in 10 roughly equal groups (which is our training data). K-fold validation is finding the best degree polynomial regression model for our (training) data set. We should use this, rather than simply fitting and testing models on the entire training set we want to see which model best fits our data on ten separate pieces of data, rather than just guessing. If we did use the entire training set, we would use the bootstrap method. 
 
 Question 4
 ```{r}
@@ -82,12 +83,13 @@ qda_wrkflow <- workflow() %>%
 
 ```
 
+I would have a total of 30 models across all folds that I would fitting to the data. 
 
 Question 5
 ```{r, eval = FALSE}
-log_fit <- fit_resamples(log_wrkflow, titanic_folds)
-lda_fit <- fit_resamples(lda_wrkflow, titanic_folds)
-qda_fit <- fit_resamples(qda_wrkflow, titanic_folds)
+#log_fit <- fit_resamples(log_wrkflow, titanic_folds)
+#lda_fit <- fit_resamples(lda_wrkflow, titanic_folds)
+#qda_fit <- fit_resamples(qda_wrkflow, titanic_folds)
 
 #getwd()
 #save(log_fit, lda_fit, qda_fit, file = "mydata.rda")
@@ -98,13 +100,15 @@ load(file = "mydata.rda")
 
 Question 6: mean and std errors
 ```{r}
-collect_metrics(log_fit)[1,] #mean: 0.7865, std: 0.0133
-collect_metrics(lda_fit)[1,] #mean: 0.7893, std: 0.01283
-collect_metrics(qda_fit)[1,] #mean: 0.76559, std: 0.0177
+log_m <- collect_metrics(log_fit)[1,] #mean: 0.7865, std: 0.0133
+lda_m <- collect_metrics(lda_fit)[1,] #mean: 0.7893, std: 0.01283
+qda_m <- collect_metrics(qda_fit)[1,] #mean: 0.76559, std: 0.0177
 
-rbind(d())
-#so lda_fit better?
+rbind(c(log_m, lda_m, qda_m))
+bind_rows(list(log_m, lda_m, qda_m))
 ```
+
+Based on the means, linear discriminant analysis has the largest mean with one of the lowest standard errors, so it performs the best. 
 
 Question 7
 ```{r}
@@ -124,20 +128,5 @@ lda_acc <- lda_pred %>%
 lda_acc
 ```
 
-```{r}
-degree_grid <- grid_regular(degree(range = c(1, 10)), levels = 10)
-degree_grid
-
-tune_res <- tune_grid(
-  object = poly_tuned_wf, 
-  resamples = auto_folds, 
-  grid = degree_grid,
-  control = control_grid(verbose = TRUE)
-```
-
-
-```{r}
-)
-```
-
+This model has a testing accuracy of an estimated 0.7989, while the average accuracy across folds was around 0.7893. This means our newest model has a higher accuracy than the average accuracy across folds.
 
