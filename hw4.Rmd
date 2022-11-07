@@ -17,20 +17,9 @@ tidymodels_prefer()
 titanic <- read.csv("data/titanic.csv") %>% 
   mutate(survived = factor(survived, levels = c("Yes", "No")))
 titanic$pclass <- as.factor(titanic$pclass)
-titanic
 set.seed(1234)
 ```
 
-Preparing recipe from hw3 cont. with recipe
-```{r}
-titanic_recipe <-
-  recipe(survived ~ pclass+sex+age+sib_sp+parch+fare, data = train) %>%
-  step_impute_linear(age,
-                     impute_with = imp_vars(sib_sp, parch, fare)) %>%
-  step_dummy(all_nominal_predictors()) %>%
-  step_interact(terms = ~starts_with("sex"):fare + age:fare)
-titanic_recipe
-```
 
 Question 1
 ```{r}
@@ -45,6 +34,18 @@ test <- testing(titanic_split)
 
 
 179 observations for the testing data set and 712 observations for the training data set. In adding them up, it makes a total of 891 observations, which is an appropriate number of observations.
+
+*INSERT RECIPE BELOW* FROM HW 3
+```{r}
+titanic_recipe <-
+  recipe(survived ~ pclass+sex+age+sib_sp+parch+fare, data = train) %>%
+  step_impute_linear(age,
+                     impute_with = imp_vars(sib_sp, parch, fare)) %>%
+  step_dummy(all_nominal_predictors()) %>%
+  step_interact(terms = ~starts_with("sex"):fare + age:fare)
+titanic_recipe
+```
+
 
 Question 2
 ```{r}
@@ -87,9 +88,9 @@ I would have a total of 30 models across all folds that I would fitting to the d
 
 Question 5
 ```{r, eval = FALSE}
-#log_fit <- fit_resamples(log_wrkflow, titanic_folds)
-#lda_fit <- fit_resamples(lda_wrkflow, titanic_folds)
-#qda_fit <- fit_resamples(qda_wrkflow, titanic_folds)
+log_fit <- fit_resamples(log_wrkflow, titanic_folds)
+lda_fit <- fit_resamples(lda_wrkflow, titanic_folds)
+qda_fit <- fit_resamples(qda_wrkflow, titanic_folds)
 
 #getwd()
 #save(log_fit, lda_fit, qda_fit, file = "mydata.rda")
@@ -100,6 +101,10 @@ load(file = "mydata.rda")
 
 Question 6: mean and std errors
 ```{r}
+log_fit <- fit_resamples(log_wrkflow, titanic_folds)
+lda_fit <- fit_resamples(lda_wrkflow, titanic_folds)
+qda_fit <- fit_resamples(qda_wrkflow, titanic_folds)
+
 log_m <- collect_metrics(log_fit)[1,] #mean: 0.7865, std: 0.0133
 lda_m <- collect_metrics(lda_fit)[1,] #mean: 0.7893, std: 0.01283
 qda_m <- collect_metrics(qda_fit)[1,] #mean: 0.76559, std: 0.0177
