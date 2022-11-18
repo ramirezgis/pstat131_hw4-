@@ -1,0 +1,146 @@
+---
+title: "hw5"
+output: html_document
+date: "2022-11-17"
+---
+
+Set up 
+```{r}
+library(tidymodels)
+library(tidyverse)
+library(dplyr)
+#library(corrr)
+library(ggplot2)
+library(discrim)
+library(klaR)
+library(glmnet)
+tidymodels_prefer()
+pokemon <- read.csv("data/Pokemon.csv")
+set.seed(1234)
+
+```
+
+Question 1
+```{r}
+library(janitor)
+pokemon <- pokemon %>%
+  clean_names() #names lowercase without periods/commas
+#now underscore
+```
+
+
+Question 2
+```{r}
+barchart <- ggplot(data = pokemon, aes(x = type_1)) +
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+barchart
+
+#filter out rarer classes
+pokemon_filter <- pokemon %>%
+  filter(type_1 == c("Bug", "Fire", "Grass", "Normal", "Water", "Psychic"))
+pokemon_factor <- pokemon_filter %>%
+  mutate(type_1 = factor(type_1), 
+         legendary = factor(legendary))
+```
+
+
+Exercise 3
+```{r}
+pokemon_split <- initial_split(pokemon_factor, 
+                               prop = 0.80, 
+                               strata = type_1)
+pokemon_split
+
+pokemon_train <- training(pokemon_split)
+pokemon_test <- testing(pokemon_split)
+
+pokemon_folds <- vfold_cv(pokemon_train, v = 5, 
+                          strata = type_1)
+pokemon_folds
+
+```
+
+Exercise 4
+```{r}
+pokemon_recipe <-
+  recipe(type_1 ~ legendary + generation + sp_atk + attack + speed + defense + 
+           hp + sp_def, data = pokemon_train) %>%
+  step_dummy(legendary, generation) %>% #all_nominal_predictors?
+  step_center(all_predictors()) %>%
+  step_scale(all_predictors())
+pokemon_recipe
+```
+
+Exercise 5 - ERROR
+```{r}
+multi_model <- multinom_reg(mixture = tune(), penalty = tune()) %>%
+  set_engine(glmnet)
+multi_model
+
+
+multi_wrkflow <- workflow() %>%
+  add_model(multi_model) %>%
+  add_recipe(pokemon_recipe)
+
+pokemon_grid <- grid_regular(penalty(range = c(-5, 5)), 
+                             mixture(range = c(0, 1)), levels = 10)
+pokemon_grid
+```
+
+Exercise 6
+```{r}
+#use autoplot()
+tune_res <- tune_grid(
+  multi_wrkflow,
+  resamples = pokemon_fold, 
+  grid = pokemon_grid
+)
+autoplot(tune_res)
+```
+
+
+Exercise 7
+```{r}
+best_penalty <- select_best(tune_res, metric = "roc_auc") #rsq??
+best_penalty
+
+ridge_final <- finalize_workflow(multi_wrkflow, best_penalty)
+
+ridge_final_fit <- fit(ridge_final, data = pokemon_train)
+
+multi_metric <- metric_set(accuracy, sensitivity, specificity)
+augment(ridge_final_fit, new_data = pokemon_test) %>%
+  rsq(truth = type_1, estimate = .pred) #rsq??? not roc_auc or multi_metric
+```
+
+
+Exercise 8 - HELP
+```{r}
+bug_fit <- augment(ridge_final_fit, new_data = pokemon_test) %>%
+  roc_curve(type_1, .pred_Bug) %>%
+  autoplot()
+
+fire_fit <- augment(ridge_final_fit, new_data = pokemon_test) %>%
+  roc_curve(type_1, .pred_Fire) %>%
+  autoplot()
+
+grass_fit <- augment(ridge_final_fit, new_data = pokemon_test) %>%
+  roc_curve(type_1, .pred_Grass) %>%
+  autoplot()
+
+normal_fit <- augment(ridge_final_fit, new_data = pokemon_test) %>%
+  roc_curve(type_1, .pred_Normal) %>%
+  autoplot()
+
+water_fit <- augment(ridge_final_fit, new_data = pokemon_test) %>%
+  roc_curve(type_1, .pred_Water) %>%
+  autoplot()
+
+psychic_fit <- augment(ridge_final_fit, new_data = pokemon_test) %>%
+  roc_curve(type_1, .pred_Psychic) %>%
+  autoplot()
+
+heatmap(pokemon_factor, scale = "column")
+```
+
