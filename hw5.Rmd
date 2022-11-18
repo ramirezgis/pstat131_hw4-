@@ -75,7 +75,8 @@ pokemon_recipe
 Exercise 5 - ERROR
 ```{r}
 multi_model <- multinom_reg(mixture = tune(), penalty = tune()) %>%
-  set_engine(glmnet)
+  set_engine("glmnet") %>%
+  set_mode("classification")
 multi_model
 
 
@@ -93,7 +94,7 @@ Exercise 6
 #use autoplot()
 tune_res <- tune_grid(
   multi_wrkflow,
-  resamples = pokemon_fold, 
+  resamples = pokemon_folds, 
   grid = pokemon_grid
 )
 autoplot(tune_res)
@@ -110,37 +111,25 @@ ridge_final <- finalize_workflow(multi_wrkflow, best_penalty)
 ridge_final_fit <- fit(ridge_final, data = pokemon_train)
 
 multi_metric <- metric_set(accuracy, sensitivity, specificity)
-augment(ridge_final_fit, new_data = pokemon_test) %>%
-  rsq(truth = type_1, estimate = .pred) #rsq??? not roc_auc or multi_metric
+roc_auc1 <- augment(ridge_final_fit, new_data = pokemon_test) %>%
+  select(type_1, starts_with(".pred")) #rsq??? #not roc_auc or multi_metric
 ```
 
 
-Exercise 8 - HELP
+Exercise 8 
 ```{r}
-bug_fit <- augment(ridge_final_fit, new_data = pokemon_test) %>%
-  roc_curve(type_1, .pred_Bug) %>%
-  autoplot()
+fit_1 <- roc_auc1 %>%
+  roc_auc(type_1, .pred_Bug:.pred_Water)
+fit_1 #0.744
 
-fire_fit <- augment(ridge_final_fit, new_data = pokemon_test) %>%
-  roc_curve(type_1, .pred_Fire) %>%
-  autoplot()
+fit_2 <- roc_auc1 %>%
+  roc_curve(type_1, .pred_Bug:.pred_Water)
+ggplot2::autoplot(fit_2)
+#roc_curve
 
-grass_fit <- augment(ridge_final_fit, new_data = pokemon_test) %>%
-  roc_curve(type_1, .pred_Grass) %>%
-  autoplot()
+fit_3 <- augment(ridge_final_fit, new_data = pokemon_test) %>%
+  conf_mat(truth = type_1, estimate = .pred_class)
 
-normal_fit <- augment(ridge_final_fit, new_data = pokemon_test) %>%
-  roc_curve(type_1, .pred_Normal) %>%
-  autoplot()
-
-water_fit <- augment(ridge_final_fit, new_data = pokemon_test) %>%
-  roc_curve(type_1, .pred_Water) %>%
-  autoplot()
-
-psychic_fit <- augment(ridge_final_fit, new_data = pokemon_test) %>%
-  roc_curve(type_1, .pred_Psychic) %>%
-  autoplot()
-
-heatmap(pokemon_factor, scale = "column")
+autoplot(fit_3, type = "heatmap")
 ```
 
