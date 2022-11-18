@@ -1,0 +1,21 @@
+---
+title: "hw6"
+output: html_document
+date: "2022-11-18"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidymodels)
+library(tidyverse)
+library(dplyr)
+#library(corrr)
+library(ggplot2)
+library(discrim)
+library(klaR)
+library(glmnet)
+tidymodels_prefer()
+pokemon <- read.csv("data/Pokemon.csv")
+set.seed(1234)
+```
+
