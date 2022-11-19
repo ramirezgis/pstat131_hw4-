@@ -49,8 +49,8 @@ pokemon_folds
 pokemon_recipe <-
   recipe(type_1 ~ legendary + generation + sp_atk + attack + speed + defense + 
            hp + sp_def, data = pokemon_train) %>%
-  step_dummy(legendary, generation) %>% #all_nominal_predictors?
-  step_center(all_predictors()) %>%
+  step_dummy(c("legendary", "generation")) %>% #all_nominal_predictors?
+  step_center(all_predictors()) %>% #or empty it out
   step_scale(all_predictors())
 pokemon_recipe
 
@@ -105,16 +105,14 @@ bagging_spec <- rand_forest(mtry = tune(), trees = tune(),
                             min_n = tune()) %>%
   set_engine("ranger", importance = 'impurity') %>%
   set_mode("classification")
+
 class_tree_wf2 <- workflow() %>%
-  add_model(bagging_spec) %>% #set_args(cost_complexity = tune())) %>%
-  #change model? or no set_args?
-  add_formula(type_1 ~ legendary + generation + sp_atk + attack + 
-                speed + defense + hp + sp_def) #recipe?
-param_grid2 <- grid_regular(mtry(range = c(1, 8)), trees(range = c(1, 8)),
+  add_model(bagging_spec) %>%
+  add_recipe(pokemon_recipe)
+param_grid2 <- grid_regular(mtry(range = c(1, 8)), trees(range = c(10, 2000)),
                             min_n(range = c(1, 8)), levels = 8)
 
 #EXERCISE 6: roc_auc as metric -- takes a few minutes to run
-#ERRROORRRRRRR
 tune_res2 <- tune_grid(
   class_tree_wf2, 
   resamples = pokemon_folds, 
@@ -133,12 +131,52 @@ tree_final2 <- finalize_workflow(class_tree_wf2, best_penalty2)
 tree_final_fit2 <- fit(tree_final2, data = pokemon_train)
 roc_auc2 <- augment(tree_final_fit2, new_data = pokemon_test) %>%
   select(type_1, starts_with(".pred")) %>%
-  roc_auc(type_1, .pred_Bug:.pred_Water) #0.531
+  roc_auc(type_1, .pred_Bug:.pred_Water) #0.653
 
 #EXERCISE 8: vip()
-vip(tree_final_fit2)
+vip(extract_fit_engine(tree_final_fit2))
 
 #EXERCISE 9: boosted tree model
+boost_spec <- boost_tree(trees = tune()) %>%
+  set_engine("xgboost") %>%
+  set_mode("classification")
+class_tree_wf3 <- workflow() %>%
+  add_model(boost_spec) %>%
+  add_recipe(pokemon_recipe)
+param_grid3 <- grid_regular(trees(range = c(10, 2000)),levels = 10)
+tune_res3 <- tune_grid(
+  class_tree_wf3, 
+  resamples = pokemon_folds, 
+  grid = param_grid3, 
+  metrics = metric_set(roc_auc)
+)
+autoplot(tune_res3)
 
-bagging_fit <- fit(bagging_spec, sale_price ~ ., 
-                   data = ames_train)
+collect_metrics(tune_res3)
+best_penalty3 <- select_best(tune_res3, metric = "roc_auc")
+
+tree_final3 <- finalize_workflow(class_tree_wf3, best_penalty3)
+#do i need to change workflow in hw5??
+
+tree_final_fit3 <- fit(tree_final3, data = pokemon_train)
+roc_auc3 <- augment(tree_final_fit3, new_data = pokemon_test) %>%
+  select(type_1, starts_with(".pred")) %>%
+  roc_auc(type_1, .pred_Bug:.pred_Water) #0.558
+
+#EXERCISE 10
+result <- bind_rows(roc_auc1, roc_auc2, roc_auc3) %>%
+  tibble() %>%
+  mutate(model = c('pruned tree model', 'random forest model', 
+                   'boost tree model'), 
+         .before = .metric)
+#random forest did best:
+collect_metrics(tune_res2)
+final_penalty <- select_best(tune_res2)
+
+final_tree <- finalize_workflow(class_tree_wf2, final_penalty)
+#do i need to change workflow in hw5??
+
+final_fit <- fit(final_tree, data = pokemon_test)
+final_auc_roc <- augment(final_fit, new_data = pokemon_test) %>%
+  select(type_1, starts_with(".pred")) %>%
+  roc_auc(type_1, .pred_Bug:.pred_Water) #.967

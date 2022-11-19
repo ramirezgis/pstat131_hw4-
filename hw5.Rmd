@@ -110,7 +110,6 @@ ridge_final <- finalize_workflow(multi_wrkflow, best_penalty)
 
 ridge_final_fit <- fit(ridge_final, data = pokemon_train)
 
-multi_metric <- metric_set(accuracy, sensitivity, specificity)
 roc_auc1 <- augment(ridge_final_fit, new_data = pokemon_test) %>%
   select(type_1, starts_with(".pred")) #rsq??? #not roc_auc or multi_metric
 ```
