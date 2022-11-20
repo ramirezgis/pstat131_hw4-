@@ -17,7 +17,7 @@ library(glmnet)
 tidymodels_prefer()
 pokemon <- read.csv("data/Pokemon.csv")
 set.seed(1234)
-
+head(pokemon)
 ```
 
 Question 1
@@ -28,6 +28,7 @@ pokemon <- pokemon %>%
 #now underscore
 ```
 
+With clean_names(), we see that the variables how are all lowercase and don't have periods or commas anymore and are replaced with underscore. This is useful so that the variables have a consistent variable format. 
 
 Question 2
 ```{r}
@@ -41,9 +42,11 @@ pokemon_filter <- pokemon %>%
   filter(type_1 == c("Bug", "Fire", "Grass", "Normal", "Water", "Psychic"))
 pokemon_factor <- pokemon_filter %>%
   mutate(type_1 = factor(type_1), 
-         legendary = factor(legendary))
+         legendary = factor(legendary),
+         generation = factor(generation))
 ```
 
+There are 18 classes of type_1. There are a few Pokemon that are Flying and Fairy. There are also around 35 or less Pokemon that are Dark, Dragon, Fighting, Ghost, Ground, Ice, Poison, and Steel. 
 
 Exercise 3
 ```{r}
@@ -61,18 +64,21 @@ pokemon_folds
 
 ```
 
+Stratifying the folds might be useful as we could divide also by the type of Pokemon to analyze. 
+
 Exercise 4
 ```{r}
 pokemon_recipe <-
   recipe(type_1 ~ legendary + generation + sp_atk + attack + speed + defense + 
            hp + sp_def, data = pokemon_train) %>%
-  step_dummy(legendary, generation) %>% #all_nominal_predictors?
+  step_dummy(c("legendary", "generation")) %>% #all_nominal_predictors?
   step_center(all_predictors()) %>%
   step_scale(all_predictors())
 pokemon_recipe
 ```
 
-Exercise 5 - ERROR
+
+Exercise 5 
 ```{r}
 multi_model <- multinom_reg(mixture = tune(), penalty = tune()) %>%
   set_engine("glmnet") %>%
@@ -89,6 +95,8 @@ pokemon_grid <- grid_regular(penalty(range = c(-5, 5)),
 pokemon_grid
 ```
 
+I'll be fitting 100 models.
+
 Exercise 6
 ```{r}
 #use autoplot()
@@ -100,6 +108,7 @@ tune_res <- tune_grid(
 autoplot(tune_res)
 ```
 
+I notice that a lot a lot of proportions of lasso penalty go down once it approaches 1e+00 amount of regularization. Smaller values of penalty and mixture produce better accuracy and ROC AUC. 
 
 Exercise 7
 ```{r}
@@ -111,7 +120,8 @@ ridge_final <- finalize_workflow(multi_wrkflow, best_penalty)
 ridge_final_fit <- fit(ridge_final, data = pokemon_train)
 
 roc_auc1 <- augment(ridge_final_fit, new_data = pokemon_test) %>%
-  select(type_1, starts_with(".pred")) #rsq??? #not roc_auc or multi_metric
+  select(type_1, starts_with(".pred")) 
+roc_auc1#rsq??? #not roc_auc or multi_metric
 ```
 
 
@@ -132,3 +142,4 @@ fit_3 <- augment(ridge_final_fit, new_data = pokemon_test) %>%
 autoplot(fit_3, type = "heatmap")
 ```
 
+I notice that Grass has a really high ROC curve, which is the best at predicting. Also, Normal, Psychic and Water also have a semi high ROC curve and are also best are predicting but not as high as Grass types. Fire and Bug aren't that good at predicting and don't have as high ROC curve. This may be due to not having as much values (observations) as Grass, Normal, Psychic and Water which causes Fire and Bug to not have as high ROC curves. 
